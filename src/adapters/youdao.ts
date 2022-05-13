@@ -1,5 +1,6 @@
 import { Adapter, Result } from "./adapter";
 import md5 from "../libs/md5";
+import { Formatter, LowerCamelCase, UpperCamelCase, LowerUnderline, UpperUnderline } from './formatter';
 
 class Youdao implements Adapter {
   key: string;
@@ -13,6 +14,13 @@ class Youdao implements Adapter {
   results: Result[] = [];
 
   phonetic: string = "";
+
+  formatters: Formatter[] = [
+    new LowerCamelCase(),
+    new UpperCamelCase(),
+    new LowerUnderline(),
+    new UpperUnderline()
+  ]
 
   constructor(key: string, secret: string) {
     this.key = key;
@@ -47,61 +55,51 @@ class Youdao implements Adapter {
 
     const { translation, basic, web } = data;
 
-    this.parseTranslation(translation);
-    this.parseBasic(basic);
-    this.parseWeb(web);
+    if (this.isChinese) {
+      // 因为是生成变量名（代码），普通翻译词义可能不怎么符合情况，所以将网络释义提前
+      this.parseWeb(web);
+      this.parseTranslation(translation);
+      this.parseBasic(basic);
+    }
 
     return this.results;
   }
 
   private parseTranslation(translation: object) {
-    if (translation) {
-      const pronounce = this.isChinese ? translation[0] : this.word;
-      this.addResult( translation[0], this.word, translation[0], pronounce );
+    if (translation && this.isAllLetter(translation[0])) {
+      this.formatters.forEach(formatter => {
+        const formatted = formatter.format(translation[0])
+        this.addResult(formatted, formatter.name, formatted);
+      })
     }
   }
 
   private parseBasic(basic: any) {
     if (basic) {
-      let pronounce;
-      basic.explains.forEach((explain) => {
-        pronounce = this.isChinese ? explain : this.word;
-        this.addResult(explain, this.word, explain, pronounce);
+      basic.explains.filter(this.isAllLetter).forEach((explain) => {
+        this.formatters.forEach(formatter => {
+          const formatted = formatter.format(explain)
+          this.addResult(formatted, formatter.name, formatted);
+        })
       });
-
-      if (basic.phonetic) {
-        // 获取音标，同时确定要发音的单词
-        const phonetic: string = this.parsePhonetic(basic);
-        this.addResult( phonetic, "回车可听发音", "~" + pronounce, pronounce );
-      }
     }
   }
 
   private parseWeb(web: any) {
     if (web) {
       web.forEach((item, index) => {
-        let pronounce = this.isChinese ? item.value[0] : item.key;
-        this.addResult( item.value.join(", "), item.key, item.value[0], pronounce);
+        item.value.filter(this.isAllLetter).forEach(element => {
+          this.formatters.forEach(formatter => {
+            const formatted = formatter.format(element)
+            this.addResult(formatted, formatter.name, formatted);
+          })
+        });
       });
     }
   }
 
-  private parsePhonetic(basic: any): string {
-    let phonetic: string = '';
-
-    if (this.isChinese && basic.phonetic) {
-      phonetic = "[" + basic.phonetic + "] ";
-    }
-
-    if (basic["us-phonetic"]) {
-      phonetic += " [美: " + basic["us-phonetic"] + "] ";
-    }
-
-    if (basic["uk-phonetic"]) {
-      phonetic += " [英: " + basic["uk-phonetic"] + "]";
-    }
-
-    return phonetic;
+  private isAllLetter(translation: string): boolean {
+    return /^[a-zA-Z ]+$/.test(translation)
   }
 
   private parseError(code: number): Result[] {
@@ -124,9 +122,10 @@ class Youdao implements Adapter {
     return this.addResult("👻 翻译出错啦", message, "Ooops...");
   }
 
-  private addResult( title: string, subtitle: string, arg: string = "", pronounce: string = ""): Result[] {
+  private addResult( title: string, subtitle: string, arg: string = ""): Result[] {
+    // quicklook 无法打开 codelf，所以展示使用翻译页面
+    // const quicklookurl = "https://unbug.github.io/codelf/#" + encodeURI(this.word);
     const quicklookurl = "https://www.youdao.com/w/" + this.word;
-
     const maxLength = this.detectChinese(title) ? 27 : 60;
     
     if (title.length > maxLength) {
@@ -135,7 +134,7 @@ class Youdao implements Adapter {
       subtitle = copy.slice(maxLength);
     }
 
-    this.results.push({ title, subtitle, arg, pronounce, quicklookurl });
+    this.results.push({ word: this.word, title, subtitle, arg, quicklookurl });
     return this.results;
   }
 

@@ -1,13 +1,13 @@
 {
-  "name": "youdao.translator",
-  "version": "3.0.0",
-  "description": "Elegant translation tool",
+  "name": "alfred-workflow-variable-naming",
+  "version": "0.1.0",
+  "description": "Alfred Variable Naming Workflow",
   "main": "index.js",
   "scripts": {
     "build": "rimraf dist && rollup -c rollup.config.js",
     "test": "./runtime/quick ./dist/index.js"
   },
-  "author": "Wenson",
+  "author": "jqz",
   "license": "MIT",
   "devDependencies": {
     "rimraf": "^3.0.2",

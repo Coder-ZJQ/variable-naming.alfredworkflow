@@ -1,5 +1,6 @@
 import { Adapter, Result } from "./adapter";
 import md5 from "../libs/md5";
+import { Formatter, LowerCamelCase, UpperCamelCase, LowerUnderline, UpperUnderline } from './formatter';
 
 class Baidu implements Adapter {
   key: string;
@@ -13,6 +14,13 @@ class Baidu implements Adapter {
   results: Result[] = [];
 
   phonetic: string = "";
+
+  formatters: Formatter[] = [
+    new LowerCamelCase(),
+    new UpperCamelCase(),
+    new LowerUnderline(),
+    new UpperUnderline()
+  ]
 
   constructor(key: string, secret: string) {
     this.key = key;
@@ -48,12 +56,18 @@ class Baidu implements Adapter {
     }
 
     const { trans_result:result } = data;
-    result.forEach(item => {
-      const pronounce = this.isChinese ? item.dst : this.word;
-      this.addResult(item.dst, item.src, pronounce, pronounce);
+    result.filter(this.isAllLetter).forEach(item => {
+      this.formatters.forEach(formatter => {
+        const formatted = formatter.format(item.dst)
+        this.addResult(formatted, formatter.name, formatted);
+      })
     });
 
     return this.results;
+  }
+
+  private isAllLetter(translation: string): boolean {
+    return /^[a-zA-Z ]+$/.test(translation)
   }
 
   private parseError(code: number): Result[] {
@@ -74,9 +88,10 @@ class Baidu implements Adapter {
     return this.addResult("👻 翻译出错啦", message, "Ooops...");
   }
 
-  private addResult( title: string, subtitle: string, arg: string = "", pronounce: string = ""): Result[] {
+  private addResult( title: string, subtitle: string, arg: string = ""): Result[] {
+    // quicklook 无法打开 codelf，所以展示使用翻译页面
+    // const quicklookurl = "https://unbug.github.io/codelf/#" + encodeURI(this.word);
     const quicklookurl = "https://fanyi.baidu.com/#auto/auto/" + this.word;
-
     const maxLength = this.detectChinese(title) ? 27 : 60;
     
     if (title.length > maxLength) {
@@ -85,7 +100,7 @@ class Baidu implements Adapter {
       subtitle = copy.slice(maxLength);
     }
 
-    this.results.push({ title, subtitle, arg, pronounce, quicklookurl });
+    this.results.push({ word: this.word, title, subtitle, arg, quicklookurl });
     return this.results;
   }
 

@@ -1,8 +1,10 @@
+import { Formatter } from "./formatter";
+
 export interface Result {
+  word: string;
   title: string;
   subtitle: string;
   arg: string;
-  pronounce: string;
   quicklookurl?: string;
 }
 
@@ -14,6 +16,8 @@ export interface Adapter {
   word: string;
 
   isChinese: boolean;
+
+  formatters: Formatter[]
 
   url :(word: string) => string;
 

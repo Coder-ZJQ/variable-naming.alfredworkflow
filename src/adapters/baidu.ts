@@ -63,7 +63,7 @@ class Baidu implements Adapter {
       })
     });
 
-    return this.results;
+    return this.results.sort((a, b) => a.title.length - b.title.length);
   }
 
   private isAllLetter(translation: string): boolean {

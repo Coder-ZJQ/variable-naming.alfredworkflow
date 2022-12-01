@@ -62,7 +62,7 @@ class Youdao implements Adapter {
       this.parseBasic(basic);
     }
 
-    return this.results;
+    return this.results.sort((a, b) => a.title.length - b.title.length);
   }
 
   private parseTranslation(translation: object) {
